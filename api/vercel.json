@@ -1,6 +1,6 @@
 {
   "version": 2,
   "routes": [
-    { "src": "/jup/(.*)", "dest": "/api/jup" }
+    { "src": "/jup/(.*)", "dest": "/api/jup/$1" }
   ]
 }

@@ -1,6 +1,5 @@
 export default async function handler(req, res) {
   try {
-    // Parse path/query from the incoming request
     const incoming = new URL(req.url, 'http://localhost');
     const pathOnly = incoming.pathname.replace(/^\/api\/jup/, '') || '/';
     const query = incoming.search || '';
@@ -10,7 +9,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, service: 'jup-proxy' });
     }
 
-    // Upstream
     const upstream = 'https://quote-api.jup.ag' + pathOnly + query;
 
     const init = {

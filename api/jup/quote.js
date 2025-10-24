@@ -1,9 +1,6 @@
-export const config = { runtime: 'edge' };
-
-export default async function handler(req) {
+export default async function handler(req, res) {
   try {
-    const url = new URL(req.url);
-    // Forward querystring exactly to Jupiter
+    const url = new URL(req.url, 'http://localhost');
     const upstream = 'https://quote-api.jup.ag/v6/quote' + url.search;
 
     const r = await fetch(upstream, {
@@ -14,24 +11,18 @@ export default async function handler(req) {
         'Accept-Language': 'en-US,en;q=0.9',
         'Origin': 'https://jup.ag',
         'Referer': 'https://jup.ag/'
-      }
+      },
+      // avoid any caching weirdness
+      cache: 'no-store'
     });
 
-    // Buffer body to avoid stream issues
     const text = await r.text();
-
-    // CORS + content-type
-    const h = new Headers(r.headers);
-    if (!h.get('content-type')) h.set('content-type', 'application/json');
-    h.set('access-control-allow-origin', '*');
-
-    return new Response(text, { status: r.status, headers: h });
+    res.setHeader('access-control-allow-origin', '*');
+    res.setHeader('content-type', r.headers.get('content-type') || 'application/json');
+    return res.status(r.status).send(text);
   } catch (e) {
-    // human-friendly error (still JSON)
-    return new Response(JSON.stringify({ error: String(e) }), {
-      status: 502,
-      headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' }
-    });
+    res.setHeader('access-control-allow-origin', '*');
+    res.setHeader('content-type', 'application/json');
+    return res.status(502).send(JSON.stringify({ error: String(e) }));
   }
 }
-

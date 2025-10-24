@@ -1,14 +1,16 @@
 export default async function handler(req, res) {
   try {
+    // Parse path/query from the incoming request
     const incoming = new URL(req.url, 'http://localhost');
     const pathOnly = incoming.pathname.replace(/^\/api\/jup/, '') || '/';
     const query = incoming.search || '';
 
-    // Health check: GET /api/jup => 200 OK
+    // Health check: GET /api/jup
     if (pathOnly === '/' && (req.method === 'GET' || req.method === 'HEAD')) {
       return res.status(200).json({ ok: true, service: 'jup-proxy' });
     }
 
+    // Upstream
     const upstream = 'https://quote-api.jup.ag' + pathOnly + query;
 
     const init = {
@@ -25,7 +27,7 @@ export default async function handler(req, res) {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       const body = await new Promise((resolve) => {
         let data = '';
-        req.on('data', chunk => data += chunk);
+        req.on('data', chunk => (data += chunk));
         req.on('end', () => resolve(data));
       });
       init.headers['content-type'] = req.headers['content-type'] || 'application/json';

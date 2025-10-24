@@ -1,0 +1,5 @@
+{
+  "name": "jup-proxy",
+  "private": true,
+  "type": "module"
+}

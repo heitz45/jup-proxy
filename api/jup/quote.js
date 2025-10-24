@@ -1,6 +1,17 @@
 export default async function handler(req, res) {
   try {
     const url = new URL(req.url, 'http://localhost');
+
+    // quick diagnostics
+    if (url.searchParams.get('__test') === '1') {
+      // known-good JSON endpoint
+      const t = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' });
+      const text = await t.text();
+      res.setHeader('access-control-allow-origin', '*');
+      res.setHeader('content-type', 'application/json');
+      return res.status(t.status).send(text);
+    }
+
     const upstream = 'https://quote-api.jup.ag/v6/quote' + url.search;
 
     const r = await fetch(upstream, {
@@ -12,8 +23,8 @@ export default async function handler(req, res) {
         'Origin': 'https://jup.ag',
         'Referer': 'https://jup.ag/'
       },
-      // avoid any caching weirdness
-      cache: 'no-store'
+      cache: 'no-store',
+      redirect: 'follow'
     });
 
     const text = await r.text();

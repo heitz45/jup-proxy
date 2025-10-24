@@ -1,11 +1,15 @@
 export default async function handler(req, res) {
   try {
-    // req.url includes the path part that Vercel routed to us (e.g. "/api/jup/v6/quote?...")
-    // Convert to a URL object to safely split pathname and query.
     const incoming = new URL(req.url, 'http://localhost');
-    // Remove the "/api/jup" prefix, keep the rest (e.g. "/v6/quote")
     const pathOnly = incoming.pathname.replace(/^\/api\/jup/, '') || '/';
-    const upstream = 'https://quote-api.jup.ag' + pathOnly + incoming.search;
+    const query = incoming.search || '';
+
+    // Health check: GET /api/jup => 200 OK
+    if (pathOnly === '/' && (req.method === 'GET' || req.method === 'HEAD')) {
+      return res.status(200).json({ ok: true, service: 'jup-proxy' });
+    }
+
+    const upstream = 'https://quote-api.jup.ag' + pathOnly + query;
 
     const init = {
       method: req.method,

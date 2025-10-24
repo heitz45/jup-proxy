@@ -1,12 +1,17 @@
-export default async function handler(req, res) {
+export const config = { runtime: 'edge' };
+
+export default async function handler(req) {
   try {
-    const incoming = new URL(req.url, 'http://localhost');
-    const pathOnly = incoming.pathname.replace(/^\/api\/jup/, '') || '/';
-    const query = incoming.search || '';
+    const url = new URL(req.url);
+    const pathOnly = url.pathname.replace(/^\/api\/jup/, '') || '/';
+    const query = url.search || '';
 
     // Health check: GET /api/jup
-    if (pathOnly === '/' && (req.method === 'GET' || req.method === 'HEAD')) {
-      return res.status(200).json({ ok: true, service: 'jup-proxy' });
+    if (pathOnly === '/' && req.method === 'GET') {
+      return new Response(
+        JSON.stringify({ ok: true, service: 'jup-proxy' }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      );
     }
 
     const upstream = 'https://quote-api.jup.ag' + pathOnly + query;
@@ -19,27 +24,22 @@ export default async function handler(req, res) {
         'Accept-Language': 'en-US,en;q=0.9',
         'Origin': 'https://jup.ag',
         'Referer': 'https://jup.ag/'
-      }
+      },
+      body: (req.method === 'GET' || req.method === 'HEAD') ? undefined : await req.text()
     };
 
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-      const body = await new Promise((resolve) => {
-        let data = '';
-        req.on('data', chunk => (data += chunk));
-        req.on('end', () => resolve(data));
-      });
-      init.headers['content-type'] = req.headers['content-type'] || 'application/json';
-      init.body = body;
-    }
-
     const r = await fetch(upstream, init);
-    const text = await r.text();
 
-    res.status(r.status);
-    res.setHeader('content-type', r.headers.get('content-type') || 'application/json');
-    res.setHeader('access-control-allow-origin', '*');
-    res.send(text);
+    // Pass-through response/body/headers
+    const h = new Headers(r.headers);
+    if (!h.get('content-type')) h.set('content-type', 'application/json');
+    h.set('access-control-allow-origin', '*');
+
+    return new Response(r.body, { status: r.status, headers: h });
   } catch (e) {
-    res.status(502).json({ error: String(e) });
+    return new Response(
+      JSON.stringify({ error: String(e) }),
+      { status: 502, headers: { 'content-type': 'application/json' } }
+    );
   }
 }
